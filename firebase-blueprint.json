@@ -1,0 +1,309 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile and financial preferences",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "displayName": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "email": { "type": "string", "maxLength": 254 },
+        "currency": { "type": "string", "maxLength": 10 },
+        "onboardingCompleted": { "type": "boolean" },
+        "monthlyIncome": { "type": "number" },
+        "monthlyBudget": { "type": "number" },
+        "financialMonthStartDay": { "type": "number" },
+        "lowBalanceThreshold": { "type": "number" },
+        "preferredPeriod": { "type": "string", "maxLength": 40 },
+        "notificationPrefs": { "type": "object" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "uid",
+        "displayName",
+        "email",
+        "currency",
+        "onboardingCompleted",
+        "monthlyIncome",
+        "monthlyBudget",
+        "financialMonthStartDay",
+        "lowBalanceThreshold",
+        "preferredPeriod",
+        "notificationPrefs",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Account": {
+      "title": "Account",
+      "description": "Financial account or wallet belonging to a user",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "userId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "accountType": { "type": "string", "maxLength": 40, "enum": ["Bank Account", "UPI Wallet", "Cash", "Credit Card", "Savings"] },
+        "openingBalance": { "type": "number" },
+        "currency": { "type": "string", "maxLength": 10 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "name", "accountType", "openingBalance", "currency", "createdAt", "updatedAt"]
+    },
+    "Transaction": {
+      "title": "Transaction",
+      "description": "Income, expense, or transfer transaction",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "userId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "type": { "type": "string", "maxLength": 20, "enum": ["income", "expense", "transfer"] },
+        "amount": { "type": "number" },
+        "description": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "categoryId": { "type": "string", "maxLength": 128 },
+        "categoryName": { "type": "string", "maxLength": 100 },
+        "accountId": { "type": "string", "maxLength": 128 },
+        "destinationAccountId": { "type": "string", "maxLength": 128 },
+        "paymentMethod": { "type": "string", "maxLength": 50 },
+        "date": { "type": "string", "maxLength": 30 },
+        "notes": { "type": "string", "maxLength": 500 },
+        "tags": { "type": "array" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "id",
+        "userId",
+        "type",
+        "amount",
+        "description",
+        "categoryId",
+        "categoryName",
+        "accountId",
+        "destinationAccountId",
+        "paymentMethod",
+        "date",
+        "notes",
+        "tags",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Category": {
+      "title": "Category",
+      "description": "Custom or default transaction category",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "userId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "transactionType": { "type": "string", "maxLength": 20, "enum": ["income", "expense"] },
+        "icon": { "type": "string", "maxLength": 50 },
+        "isDefault": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "name", "transactionType", "icon", "isDefault", "createdAt", "updatedAt"]
+    },
+    "Budget": {
+      "title": "Budget",
+      "description": "Monthly overall or category-specific spending budget",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "userId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "amount": { "type": "number" },
+        "categoryId": { "type": "string", "maxLength": 128 },
+        "categoryName": { "type": "string", "maxLength": 100 },
+        "periodStart": { "type": "string", "maxLength": 30 },
+        "periodEnd": { "type": "string", "maxLength": 30 },
+        "budgetMonth": { "type": "string", "maxLength": 20 },
+        "description": { "type": "string", "maxLength": 300 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "id",
+        "userId",
+        "name",
+        "amount",
+        "categoryId",
+        "categoryName",
+        "periodStart",
+        "periodEnd",
+        "budgetMonth",
+        "description",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "SavingsGoal": {
+      "title": "SavingsGoal",
+      "description": "Savings goal tracker record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "userId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "targetAmount": { "type": "number" },
+        "currentSavedAmount": { "type": "number" },
+        "targetDate": { "type": "string", "maxLength": 30 },
+        "description": { "type": "string", "maxLength": 300 },
+        "icon": { "type": "string", "maxLength": 50 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "id",
+        "userId",
+        "name",
+        "targetAmount",
+        "currentSavedAmount",
+        "targetDate",
+        "description",
+        "icon",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "GoalContribution": {
+      "title": "GoalContribution",
+      "description": "Contribution or withdrawal record for a savings goal",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "userId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "goalId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "amount": { "type": "number" },
+        "type": { "type": "string", "maxLength": 20, "enum": ["contribution", "withdrawal"] },
+        "date": { "type": "string", "maxLength": 30 },
+        "notes": { "type": "string", "maxLength": 300 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "goalId", "amount", "type", "date", "notes", "createdAt"]
+    },
+    "Reminder": {
+      "title": "Reminder",
+      "description": "Bill and recurring payment reminder",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "userId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "title": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "amount": { "type": "number" },
+        "dueDate": { "type": "string", "maxLength": 30 },
+        "category": { "type": "string", "maxLength": 80 },
+        "recurrence": { "type": "string", "maxLength": 20, "enum": ["none", "weekly", "monthly", "yearly"] },
+        "notes": { "type": "string", "maxLength": 300 },
+        "notifyInApp": { "type": "boolean" },
+        "completed": { "type": "boolean" },
+        "nextOccurrence": { "type": "string", "maxLength": 30 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "id",
+        "userId",
+        "title",
+        "amount",
+        "dueDate",
+        "category",
+        "recurrence",
+        "notes",
+        "notifyInApp",
+        "completed",
+        "nextOccurrence",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "In-app financial alert or reminder notification",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "userId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "title": { "type": "string", "minLength": 1, "maxLength": 150 },
+        "message": { "type": "string", "minLength": 1, "maxLength": 500 },
+        "type": { "type": "string", "maxLength": 30, "enum": ["budget", "spending", "low_balance", "reminder", "system"] },
+        "severity": { "type": "string", "maxLength": 20, "enum": ["info", "warning", "critical"] },
+        "isRead": { "type": "boolean" },
+        "relatedEntityId": { "type": "string", "maxLength": 128 },
+        "deduplicationKey": { "type": "string", "maxLength": 150 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "id",
+        "userId",
+        "title",
+        "message",
+        "type",
+        "severity",
+        "isRead",
+        "relatedEntityId",
+        "deduplicationKey",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "AIConversationMessage": {
+      "title": "AIConversationMessage",
+      "description": "Individual message in the user's AI Financial Assistant conversation",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "userId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "role": { "type": "string", "maxLength": 20, "enum": ["user", "assistant"] },
+        "content": { "type": "string", "minLength": 1, "maxLength": 8000 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "role", "content", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "Stores isolated user profile and financial preferences"
+    },
+    "/accounts/{accountId}": {
+      "schema": { "$ref": "#/entities/Account" },
+      "description": "Stores user financial accounts and wallets"
+    },
+    "/transactions/{transactionId}": {
+      "schema": { "$ref": "#/entities/Transaction" },
+      "description": "Stores user income, expense, and transfer transactions"
+    },
+    "/categories/{categoryId}": {
+      "schema": { "$ref": "#/entities/Category" },
+      "description": "Stores user custom and default categories"
+    },
+    "/budgets/{budgetId}": {
+      "schema": { "$ref": "#/entities/Budget" },
+      "description": "Stores overall and category-specific monthly budgets"
+    },
+    "/savingsGoals/{goalId}": {
+      "schema": { "$ref": "#/entities/SavingsGoal" },
+      "description": "Stores user savings goals"
+    },
+    "/goalContributions/{contributionId}": {
+      "schema": { "$ref": "#/entities/GoalContribution" },
+      "description": "Stores savings goal contributions and withdrawals"
+    },
+    "/reminders/{reminderId}": {
+      "schema": { "$ref": "#/entities/Reminder" },
+      "description": "Stores bill and recurring payment reminders"
+    },
+    "/notifications/{notificationId}": {
+      "schema": { "$ref": "#/entities/Notification" },
+      "description": "Stores deduplicated smart alerts and reminder notifications"
+    },
+    "/aiConversations/{conversationId}": {
+      "schema": { "$ref": "#/entities/AIConversationMessage" },
+      "description": "Stores user AI financial assistant chat messages"
+    }
+  }
+}

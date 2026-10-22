@@ -1,0 +1,460 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+
+    function isValidNotificationPrefs(prefs) {
+      return prefs is map
+        && prefs.keys().hasAll(['budgetAlerts', 'spendingAlerts', 'lowBalanceAlerts', 'billReminders'])
+        && prefs.keys().hasOnly(['budgetAlerts', 'spendingAlerts', 'lowBalanceAlerts', 'billReminders'])
+        && prefs.budgetAlerts is bool
+        && prefs.spendingAlerts is bool
+        && prefs.lowBalanceAlerts is bool
+        && prefs.billReminders is bool;
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll([
+          'uid', 'displayName', 'email', 'currency', 'onboardingCompleted',
+          'monthlyIncome', 'monthlyBudget', 'financialMonthStartDay',
+          'lowBalanceThreshold', 'preferredPeriod', 'notificationPrefs',
+          'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'uid', 'displayName', 'email', 'currency', 'onboardingCompleted',
+          'monthlyIncome', 'monthlyBudget', 'financialMonthStartDay',
+          'lowBalanceThreshold', 'preferredPeriod', 'notificationPrefs',
+          'createdAt', 'updatedAt'
+        ])
+        && data.uid == request.auth.uid
+        && isValidId(data.uid)
+        && data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 100
+        && data.email is string && data.email.size() >= 3 && data.email.size() <= 254
+        && data.currency is string && data.currency.size() >= 1 && data.currency.size() <= 10
+        && data.onboardingCompleted is bool
+        && data.monthlyIncome is number && data.monthlyIncome >= 0
+        && data.monthlyBudget is number && data.monthlyBudget >= 0
+        && data.financialMonthStartDay is number && data.financialMonthStartDay >= 1 && data.financialMonthStartDay <= 28
+        && data.lowBalanceThreshold is number && data.lowBalanceThreshold >= 0
+        && data.preferredPeriod is string && data.preferredPeriod.size() >= 1 && data.preferredPeriod.size() <= 40
+        && isValidNotificationPrefs(data.notificationPrefs)
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidAccount(data) {
+      return data.keys().hasAll([
+          'id', 'userId', 'name', 'accountType', 'openingBalance', 'currency', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'userId', 'name', 'accountType', 'openingBalance', 'currency', 'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.id)
+        && data.userId == request.auth.uid
+        && isValidId(data.userId)
+        && data.name is string && data.name.size() >= 1 && data.name.size() <= 100
+        && data.accountType is string && data.accountType.size() <= 40
+        && data.accountType in ['Bank Account', 'UPI Wallet', 'Cash', 'Credit Card', 'Savings']
+        && data.openingBalance is number
+        && data.currency is string && data.currency.size() >= 1 && data.currency.size() <= 10
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidTransaction(data) {
+      return data.keys().hasAll([
+          'id', 'userId', 'type', 'amount', 'description', 'categoryId',
+          'categoryName', 'accountId', 'destinationAccountId', 'paymentMethod',
+          'date', 'notes', 'tags', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'userId', 'type', 'amount', 'description', 'categoryId',
+          'categoryName', 'accountId', 'destinationAccountId', 'paymentMethod',
+          'date', 'notes', 'tags', 'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.id)
+        && data.userId == request.auth.uid
+        && isValidId(data.userId)
+        && data.type is string && data.type.size() <= 20
+        && data.type in ['income', 'expense', 'transfer']
+        && data.amount is number && data.amount > 0
+        && data.description is string && data.description.size() >= 1 && data.description.size() <= 200
+        && data.categoryId is string && data.categoryId.size() <= 128
+        && data.categoryName is string && data.categoryName.size() <= 100
+        && data.accountId is string && data.accountId.size() >= 1 && data.accountId.size() <= 128
+        && data.destinationAccountId is string && data.destinationAccountId.size() <= 128
+        && data.paymentMethod is string && data.paymentMethod.size() >= 1 && data.paymentMethod.size() <= 50
+        && data.date is string && data.date.size() >= 8 && data.date.size() <= 30
+        && data.notes is string && data.notes.size() <= 500
+        && data.tags is list && data.tags.size() <= 10
+        && (data.tags.size() == 0 || (data.tags[0] is string && data.tags[0].size() <= 40))
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidCategory(data) {
+      return data.keys().hasAll([
+          'id', 'userId', 'name', 'transactionType', 'icon', 'isDefault', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'userId', 'name', 'transactionType', 'icon', 'isDefault', 'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.id)
+        && data.userId == request.auth.uid
+        && isValidId(data.userId)
+        && data.name is string && data.name.size() >= 1 && data.name.size() <= 80
+        && data.transactionType is string && data.transactionType.size() <= 20
+        && data.transactionType in ['income', 'expense']
+        && data.icon is string && data.icon.size() <= 50
+        && data.isDefault is bool
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidBudget(data) {
+      return data.keys().hasAll([
+          'id', 'userId', 'name', 'amount', 'categoryId', 'categoryName',
+          'periodStart', 'periodEnd', 'budgetMonth', 'description', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'userId', 'name', 'amount', 'categoryId', 'categoryName',
+          'periodStart', 'periodEnd', 'budgetMonth', 'description', 'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.id)
+        && data.userId == request.auth.uid
+        && isValidId(data.userId)
+        && data.name is string && data.name.size() >= 1 && data.name.size() <= 100
+        && data.amount is number && data.amount > 0
+        && data.categoryId is string && data.categoryId.size() >= 1 && data.categoryId.size() <= 128
+        && data.categoryName is string && data.categoryName.size() >= 1 && data.categoryName.size() <= 100
+        && data.periodStart is string && data.periodStart.size() <= 30
+        && data.periodEnd is string && data.periodEnd.size() <= 30
+        && data.budgetMonth is string && data.budgetMonth.size() >= 7 && data.budgetMonth.size() <= 20
+        && data.description is string && data.description.size() <= 300
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidSavingsGoal(data) {
+      return data.keys().hasAll([
+          'id', 'userId', 'name', 'targetAmount', 'currentSavedAmount',
+          'targetDate', 'description', 'icon', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'userId', 'name', 'targetAmount', 'currentSavedAmount',
+          'targetDate', 'description', 'icon', 'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.id)
+        && data.userId == request.auth.uid
+        && isValidId(data.userId)
+        && data.name is string && data.name.size() >= 1 && data.name.size() <= 100
+        && data.targetAmount is number && data.targetAmount > 0
+        && data.currentSavedAmount is number && data.currentSavedAmount >= 0
+        && data.targetDate is string && data.targetDate.size() >= 8 && data.targetDate.size() <= 30
+        && data.description is string && data.description.size() <= 300
+        && data.icon is string && data.icon.size() <= 50
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidGoalContribution(data) {
+      return data.keys().hasAll([
+          'id', 'userId', 'goalId', 'amount', 'type', 'date', 'notes', 'createdAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'userId', 'goalId', 'amount', 'type', 'date', 'notes', 'createdAt'
+        ])
+        && isValidId(data.id)
+        && data.userId == request.auth.uid
+        && isValidId(data.userId)
+        && isValidId(data.goalId)
+        && data.amount is number && data.amount > 0
+        && data.type is string && data.type.size() <= 20
+        && data.type in ['contribution', 'withdrawal']
+        && data.date is string && data.date.size() >= 8 && data.date.size() <= 30
+        && data.notes is string && data.notes.size() <= 300
+        && data.createdAt is timestamp;
+    }
+
+    function isValidReminder(data) {
+      return data.keys().hasAll([
+          'id', 'userId', 'title', 'amount', 'dueDate', 'category',
+          'recurrence', 'notes', 'notifyInApp', 'completed', 'nextOccurrence',
+          'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'userId', 'title', 'amount', 'dueDate', 'category',
+          'recurrence', 'notes', 'notifyInApp', 'completed', 'nextOccurrence',
+          'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.id)
+        && data.userId == request.auth.uid
+        && isValidId(data.userId)
+        && data.title is string && data.title.size() >= 1 && data.title.size() <= 120
+        && data.amount is number && data.amount >= 0
+        && data.dueDate is string && data.dueDate.size() >= 8 && data.dueDate.size() <= 30
+        && data.category is string && data.category.size() >= 1 && data.category.size() <= 80
+        && data.recurrence is string && data.recurrence.size() <= 20
+        && data.recurrence in ['none', 'weekly', 'monthly', 'yearly']
+        && data.notes is string && data.notes.size() <= 300
+        && data.notifyInApp is bool
+        && data.completed is bool
+        && data.nextOccurrence is string && data.nextOccurrence.size() <= 30
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidNotification(data) {
+      return data.keys().hasAll([
+          'id', 'userId', 'title', 'message', 'type', 'severity',
+          'isRead', 'relatedEntityId', 'deduplicationKey', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'userId', 'title', 'message', 'type', 'severity',
+          'isRead', 'relatedEntityId', 'deduplicationKey', 'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.id)
+        && data.userId == request.auth.uid
+        && isValidId(data.userId)
+        && data.title is string && data.title.size() >= 1 && data.title.size() <= 150
+        && data.message is string && data.message.size() >= 1 && data.message.size() <= 500
+        && data.type is string && data.type.size() <= 30
+        && data.type in ['budget', 'spending', 'low_balance', 'reminder', 'system']
+        && data.severity is string && data.severity.size() <= 20
+        && data.severity in ['info', 'warning', 'critical']
+        && data.isRead is bool
+        && data.relatedEntityId is string && data.relatedEntityId.size() <= 128
+        && data.deduplicationKey is string && data.deduplicationKey.size() >= 1 && data.deduplicationKey.size() <= 150
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidAIConversationMessage(data) {
+      return data.keys().hasAll([
+          'id', 'userId', 'role', 'content', 'createdAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'userId', 'role', 'content', 'createdAt'
+        ])
+        && isValidId(data.id)
+        && data.userId == request.auth.uid
+        && isValidId(data.userId)
+        && data.role is string && data.role.size() <= 20
+        && data.role in ['user', 'assistant']
+        && data.content is string && data.content.size() >= 1 && data.content.size() <= 8000
+        && data.createdAt is timestamp;
+    }
+
+    match /users/{userId} {
+      allow get: if isSignedIn() && isValidId(userId) && request.auth.uid == userId;
+      allow list: if false;
+      allow create: if isSignedIn() && isValidId(userId) && request.auth.uid == userId
+        && isValidUser(incoming())
+        && incoming().uid == userId
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isSignedIn() && isValidId(userId) && isValidUser(incoming())
+        && request.auth.uid == userId
+        && existing().uid == request.auth.uid
+        && incoming().uid == existing().uid
+        && incoming().email == existing().email
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'displayName', 'currency', 'onboardingCompleted', 'monthlyIncome',
+          'monthlyBudget', 'financialMonthStartDay', 'lowBalanceThreshold',
+          'preferredPeriod', 'notificationPrefs', 'updatedAt'
+        ]);
+      allow delete: if isSignedIn() && isValidId(userId) && request.auth.uid == userId && existing().uid == request.auth.uid;
+    }
+
+    match /accounts/{accountId} {
+      allow get: if isSignedIn() && isValidId(accountId) && existing().userId == request.auth.uid;
+      allow list: if isSignedIn() && existing().userId == request.auth.uid;
+      allow create: if isSignedIn() && isValidId(accountId)
+        && isValidAccount(incoming())
+        && incoming().id == accountId
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isSignedIn() && isValidId(accountId) && isValidAccount(incoming())
+        && existing().userId == request.auth.uid
+        && incoming().id == existing().id
+        && incoming().userId == existing().userId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'name', 'accountType', 'openingBalance', 'currency', 'updatedAt'
+        ]);
+      allow delete: if isSignedIn() && isValidId(accountId) && existing().userId == request.auth.uid;
+    }
+
+    match /transactions/{transactionId} {
+      allow get: if isSignedIn() && isValidId(transactionId) && existing().userId == request.auth.uid;
+      allow list: if isSignedIn() && existing().userId == request.auth.uid;
+      allow create: if isSignedIn() && isValidId(transactionId)
+        && isValidTransaction(incoming())
+        && incoming().id == transactionId
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isSignedIn() && isValidId(transactionId) && isValidTransaction(incoming())
+        && existing().userId == request.auth.uid
+        && incoming().id == existing().id
+        && incoming().userId == existing().userId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'type', 'amount', 'description', 'categoryId', 'categoryName',
+          'accountId', 'destinationAccountId', 'paymentMethod', 'date',
+          'notes', 'tags', 'updatedAt'
+        ]);
+      allow delete: if isSignedIn() && isValidId(transactionId) && existing().userId == request.auth.uid;
+    }
+
+    match /categories/{categoryId} {
+      allow get: if isSignedIn() && isValidId(categoryId) && existing().userId == request.auth.uid;
+      allow list: if isSignedIn() && existing().userId == request.auth.uid;
+      allow create: if isSignedIn() && isValidId(categoryId)
+        && isValidCategory(incoming())
+        && incoming().id == categoryId
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isSignedIn() && isValidId(categoryId) && isValidCategory(incoming())
+        && existing().userId == request.auth.uid
+        && incoming().id == existing().id
+        && incoming().userId == existing().userId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'name', 'transactionType', 'icon', 'updatedAt'
+        ]);
+      allow delete: if isSignedIn() && isValidId(categoryId) && existing().userId == request.auth.uid;
+    }
+
+    match /budgets/{budgetId} {
+      allow get: if isSignedIn() && isValidId(budgetId) && existing().userId == request.auth.uid;
+      allow list: if isSignedIn() && existing().userId == request.auth.uid;
+      allow create: if isSignedIn() && isValidId(budgetId)
+        && isValidBudget(incoming())
+        && incoming().id == budgetId
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isSignedIn() && isValidId(budgetId) && isValidBudget(incoming())
+        && existing().userId == request.auth.uid
+        && incoming().id == existing().id
+        && incoming().userId == existing().userId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'name', 'amount', 'categoryId', 'categoryName', 'periodStart',
+          'periodEnd', 'budgetMonth', 'description', 'updatedAt'
+        ]);
+      allow delete: if isSignedIn() && isValidId(budgetId) && existing().userId == request.auth.uid;
+    }
+
+    match /savingsGoals/{goalId} {
+      allow get: if isSignedIn() && isValidId(goalId) && existing().userId == request.auth.uid;
+      allow list: if isSignedIn() && existing().userId == request.auth.uid;
+      allow create: if isSignedIn() && isValidId(goalId)
+        && isValidSavingsGoal(incoming())
+        && incoming().id == goalId
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isSignedIn() && isValidId(goalId) && isValidSavingsGoal(incoming())
+        && existing().userId == request.auth.uid
+        && incoming().id == existing().id
+        && incoming().userId == existing().userId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'name', 'targetAmount', 'currentSavedAmount', 'targetDate',
+          'description', 'icon', 'updatedAt'
+        ]);
+      allow delete: if isSignedIn() && isValidId(goalId) && existing().userId == request.auth.uid;
+    }
+
+    match /goalContributions/{contributionId} {
+      allow get: if isSignedIn() && isValidId(contributionId) && existing().userId == request.auth.uid;
+      allow list: if isSignedIn() && existing().userId == request.auth.uid;
+      allow create: if isSignedIn() && isValidId(contributionId)
+        && isValidGoalContribution(incoming())
+        && incoming().id == contributionId
+        && incoming().createdAt == request.time
+        && exists(/databases/$(database)/documents/savingsGoals/$(incoming().goalId))
+        && get(/databases/$(database)/documents/savingsGoals/$(incoming().goalId)).data.userId == request.auth.uid;
+      allow update: if false;
+      allow delete: if isSignedIn() && isValidId(contributionId) && existing().userId == request.auth.uid;
+    }
+
+    match /reminders/{reminderId} {
+      allow get: if isSignedIn() && isValidId(reminderId) && existing().userId == request.auth.uid;
+      allow list: if isSignedIn() && existing().userId == request.auth.uid;
+      allow create: if isSignedIn() && isValidId(reminderId)
+        && isValidReminder(incoming())
+        && incoming().id == reminderId
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isSignedIn() && isValidId(reminderId) && isValidReminder(incoming())
+        && existing().userId == request.auth.uid
+        && incoming().id == existing().id
+        && incoming().userId == existing().userId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'title', 'amount', 'dueDate', 'category', 'recurrence',
+          'notes', 'notifyInApp', 'completed', 'nextOccurrence', 'updatedAt'
+        ]);
+      allow delete: if isSignedIn() && isValidId(reminderId) && existing().userId == request.auth.uid;
+    }
+
+    match /notifications/{notificationId} {
+      allow get: if isSignedIn() && isValidId(notificationId) && existing().userId == request.auth.uid;
+      allow list: if isSignedIn() && existing().userId == request.auth.uid;
+      allow create: if isSignedIn() && isValidId(notificationId)
+        && isValidNotification(incoming())
+        && incoming().id == notificationId
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isSignedIn() && isValidId(notificationId) && isValidNotification(incoming())
+        && existing().userId == request.auth.uid
+        && incoming().id == existing().id
+        && incoming().userId == existing().userId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'isRead', 'updatedAt'
+        ]);
+      allow delete: if isSignedIn() && isValidId(notificationId) && existing().userId == request.auth.uid;
+    }
+
+    match /aiConversations/{conversationId} {
+      allow get: if isSignedIn() && isValidId(conversationId) && existing().userId == request.auth.uid;
+      allow list: if isSignedIn() && existing().userId == request.auth.uid;
+      allow create: if isSignedIn() && isValidId(conversationId)
+        && isValidAIConversationMessage(incoming())
+        && incoming().id == conversationId
+        && incoming().createdAt == request.time;
+      allow update: if false;
+      allow delete: if isSignedIn() && isValidId(conversationId) && existing().userId == request.auth.uid;
+    }
+  }
+}
