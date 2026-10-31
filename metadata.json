@@ -1,0 +1,6 @@
+{
+  "name": "Finora — Personal Finance Manager",
+  "description": "Take Control of Your Money. Track income and expenses, manage monthly budgets, monitor savings goals, visualize spending patterns, and get AI-powered financial insights.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
