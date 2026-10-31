@@ -1,5 +1,9 @@
 # Finora - Personal Finance Manager
 
+<p align="center">
+  <img src="./docs/finora-overview.svg" alt="Finora personal finance dashboard illustration" width="100%">
+</p>
+
 Finora is a personal finance dashboard for students and young professionals in India. It tracks income, expenses, accounts, budgets, savings goals, loans, subscriptions, reminders, and balance-sheet data while providing charts, reports, and a Gemini-powered financial assistant.
 
 ## Features
